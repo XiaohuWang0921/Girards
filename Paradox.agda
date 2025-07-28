@@ -59,99 +59,23 @@ cons S f = f (map (elim f) S)
 decons : U → ℘ (℘ U)
 decons = elim (map cons)
 
-infix 3 _⇔_
-_⇔_ : Set → Set → Set
-P ⇔ Q = (P → Q) ∧ (Q → P)
+F₀ : ℘ U
+F₀ u = ∀ F → decons u F → ¬ F (cons (decons u))
 
-⇔-refl : ∀ {P} → P ⇔ P
-⇔-refl = id , id
+S₀ : ℘ (℘ U)
+S₀ F = (u : U) → decons u F → ¬ F u
 
-⇔-sym : ∀ {P Q} → P ⇔ Q → Q ⇔ P
-⇔-sym P⇔Q = snd P⇔Q , fst P⇔Q
+δ₁ : {u : U} → F₀ u → F₀ (cons (decons u))
+δ₁ i F = i (F ∘ cons ∘ decons)
 
-⇔-trans : ∀ {P Q R} → P ⇔ Q → Q ⇔ R → P ⇔ R
-⇔-trans P⇔Q Q⇔R = fst Q⇔R ∘ fst P⇔Q , snd P⇔Q ∘ snd Q⇔R
+δ₂ : ∀ {F} → S₀ F → S₀ (F ∘ cons ∘ decons)
+δ₂ i u = i (cons (decons u))
 
-_≈_ : ℘ U → ℘ (℘ U)
-_≈_ F G = (u : U) → F u ⇔ G u
+ℓ₀ : ∀ F → S₀ F → ¬ F (cons S₀)
+ℓ₀ _ i c = i (cons S₀) (δ₂ i) c
 
-Congr : ℘ (℘ U)
-Congr F = F ≈ F ∘ cons ∘ decons
+ℓ₁ : S₀ F₀
+ℓ₁ u d i = i F₀ d (δ₁ {u} i)
 
-infix 4 _~_ _≈_ _≋_
-_~_ : U → ℘ U
-u ~ v = ∀ {F} → Congr F → F u → F v
-
-_≋_ : ℘ (℘ U) → ℘ (℘ (℘ U))
-_≋_ S T = ∀ {F} → Congr F → S F ⇔ T F
-
-~-congrˡ : {u : U} → Congr (u ~_)
-~-congrˡ w = (λ eqv {_} congr → fst (congr w) ∘ eqv congr) , λ eqv {_} congr → snd (congr w) ∘ eqv congr
-
-~-congrʳ : {u : U} → Congr (_~ u)
-~-congrʳ w = (λ eqv {_} congr → eqv congr ∘ snd (congr w)) , λ eqv {_} congr → eqv congr ∘ fst (congr w)
-
-~-refl : {u : U} → u ~ u
-~-refl _ = id
-
-~-sym : {u v : U} → u ~ v → v ~ u
-~-sym {u} u~v = u~v ~-congrʳ ~-refl
-
-~-trans : {u v w : U} → u ~ v → v ~ w → u ~ w
-~-trans u~v v~w congr = v~w congr ∘ u~v congr
-
-≈-refl : ∀ {F} → F ≈ F
-≈-refl _ = ⇔-refl
-
-≈-sym : ∀ {F G} → F ≈ G → G ≈ F
-≈-sym F≈G u = ⇔-sym (F≈G u)
-
-≈-trans : ∀ {F G H} → F ≈ G → G ≈ H → F ≈ H
-≈-trans F≈G G≈H u = ⇔-trans (F≈G u) (G≈H u)
-
-≋-refl : ∀ {S} → S ≋ S
-≋-refl _ = ⇔-refl
-
-≋-sym : ∀ {S T} → S ≋ T → T ≋ S
-≋-sym S≋T congr = ⇔-sym (S≋T congr)
-
-≋-trans : ∀ {R S T} → R ≋ S → S ≋ T → R ≋ T
-≋-trans R≋S S≋T congr = ⇔-trans (R≋S congr) (S≋T congr)
-
-Congr′ : ℘ (℘ (℘ U))
-Congr′ S = ∀ {F G} → F ≈ G → S F ⇔ S G
-
-≈-congrˡ : ∀ {F} → Congr′ (F ≈_)
-≈-congrˡ G≈H = flip ≈-trans G≈H , flip ≈-trans (≈-sym G≈H)
-
-≈-congrʳ : ∀ {F} → Congr′ (_≈ F)
-≈-congrʳ G≈H = ≈-trans (≈-sym G≈H) , ≈-trans G≈H
-
-≈-congr-injˡ : ∀ {F G} → Congr G → (F ≈_) ≋ (G ≈_) → F ≈ G
-≈-congr-injˡ congr eqv = snd (eqv congr) ≈-refl
-
-≈-congr-injʳ : ∀ {F G} → Congr F → (_≈ F) ≋ (_≈ G) → F ≈ G
-≈-congr-injʳ congr eqv = fst (eqv congr) ≈-refl
-
-≋-congr-map : ∀ {S} → Congr′ S → S ≋ map (cons ∘ decons) S
-≋-congr-map congr = congr
-
-≋-congr-β : ∀ {S} → Congr′ S → S ≋ decons (cons S)
-≋-congr-β = ≋-congr-map
-
-Congr″ : ℘ U
-Congr″ = Congr′ ∘ decons
-
-cons-congr-inj : ∀ {S T} → Congr′ S → Congr′ T → cons S ~ cons T → S ≋ T
-cons-congr-inj {S} {T} congrS congrT eqv = {!!}
-  where
-    eqv₁ : S ≋ decons (cons S)
-    eqv₁ = ≋-congr-β congrS
-
-    eqv₂ : decons (cons S) ≋ decons (cons T)
-    eqv₂ = eqv {λ (u : U) → decons (cons S) ≋ decons u}
-      (λ u → {!!} , λ eq {F} congr → ⇔-trans (eq congr) (⇔-sym {!!}))
-      (≋-refl {decons (cons S)})
-
-    eqv₃ : decons (cons T) ≋ T
-    eqv₃ = ≋-sym (≋-congr-β congrT)
+ℓ₂ : F₀ (cons S₀)
+ℓ₂ F = ℓ₀ (F ∘ cons ∘ decons)
